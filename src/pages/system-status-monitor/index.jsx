@@ -3,7 +3,7 @@ import Header from '../../components/ui/Header';
 import SystemHealthOverview from './components/SystemHealthOverview';
 import DataSourcePanel from './components/DataSourcePanel';
 import PerformanceMetrics from './components/PerformanceMetrics';
-import AlertThresholds from './components/AlertThresholds';
+import AlertThresholds from './components/AlertThreshholds';
 import SystemLogs from './components/SystemLogs';
 
 const SystemStatusMonitor = () => {

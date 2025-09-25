@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import Header from '../../components/ui/Header';
 import MetricsStrip from './components/MetricsStrip';
-import VisualizationTabs from './components/VisualizationTabs';
+import VisualizationTabs from './components/VisualisationTabs';
 import FilterPanel from './components/FilterPanel';
-import BenchmarkingTable from './components/BenchmarkingTable';
+import BenchmarkingTable from './components/BenchMarkingTable';
 import MetricDetailModal from './components/MetricDetailModal';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';

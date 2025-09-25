@@ -21,7 +21,7 @@ const Header = () => {
     {
       id: 'insights',
       label: 'AI Insights',
-      path: '/ai-recommendations-panel',
+      path: '/ai-recommendation-panel',
       icon: 'Brain',
       tooltip: 'Machine learning recommendations and predictive analytics'
     },

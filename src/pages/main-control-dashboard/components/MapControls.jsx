@@ -13,7 +13,8 @@ const MapControls = ({
   zoomLevel,
   onZoomIn,
   onZoomOut,
-  onResetView 
+  onResetView,
+  onTrainSelect
 }) => {
   const [trainSearchModal, setTrainSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -34,12 +35,7 @@ const MapControls = ({
     { id: 'delayed', label: 'Delayed Trains', icon: 'Clock', count: 1847 }
   ];
 
-  const layerOptions = [
-    { id: 'signals', label: 'Signal Status', icon: 'Radio' },
-    { id: 'blocks', label: 'Block Sections', icon: 'Square' },
-    { id: 'stations', label: 'Railway Stations', icon: 'MapPin' },
-    { id: 'weather', label: 'Weather Conditions', icon: 'Cloud' }
-  ];
+  const layerOptions = [];
 
   // Sample Indian train search results
   const sampleTrains = [
@@ -83,8 +79,9 @@ const MapControls = ({
   };
 
   const selectTrain = (train) => {
-    // This would typically trigger map focus on the selected train
-    console.log('Focusing on train:', train);
+    if (onTrainSelect) {
+      onTrainSelect({ number: train?.number, name: train?.name });
+    }
     setTrainSearchModal(false);
     setSearchQuery('');
     setSearchResults([]);
@@ -151,36 +148,7 @@ const MapControls = ({
           </div>
         </div>
 
-        {/* Map Layers */}
-        <div className="space-y-3">
-          <h3 className="text-sm font-medium text-foreground">Map Layers</h3>
-          <div className="space-y-2">
-            {layerOptions?.map((layer) => (
-              <div
-                key={layer?.id}
-                className={`
-                  flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-control
-                  ${mapLayers?.[layer?.id]
-                    ? 'bg-secondary/10 border-secondary text-secondary' :'bg-muted/50 border-border text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }
-                `}
-                onClick={() => toggleLayer(layer?.id)}
-              >
-                <div className="flex items-center space-x-3">
-                  <Icon name={layer?.icon} size={16} />
-                  <span className="text-sm font-medium">{layer?.label}</span>
-                </div>
-                <div className={`w-4 h-4 rounded border-2 ${
-                  mapLayers?.[layer?.id] ? 'bg-secondary border-secondary' : 'border-muted-foreground'
-                }`}>
-                  {mapLayers?.[layer?.id] && (
-                    <Icon name="Check" size={12} color="var(--color-secondary-foreground)" />
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Map Layers section removed per request */}
 
         {/* Zoom Controls */}
         <div className="space-y-3">

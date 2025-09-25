@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Header from '../../components/ui/Header';
 import MapControls from './components/MapControls';
 import InteractiveMap from './components/InteractiveMap';
-import TrainTelemetry from './components/TrainTelemetry';
+import TrainTelemetryPanel from './components/TrainTelemetryPanel';
 import KPIStrip from './components/KPIStrip';
 
 const MainControlDashboard = () => {
@@ -16,27 +16,7 @@ const MainControlDashboard = () => {
   });
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [selectedTrain, setSelectedTrain] = useState(null);
-  const [connectionStatus, setConnectionStatus] = useState('connected');
-
-  useEffect(() => {
-    // Simulate CRIS (Centre for Railway Information Systems) connection status
-    const statusInterval = setInterval(() => {
-      const statuses = ['connected', 'reconnecting', 'disconnected'];
-      const weights = [0.92, 0.06, 0.02]; // High reliability for Indian Railways
-      const random = Math.random();
-      let cumulativeWeight = 0;
-      
-      for (let i = 0; i < statuses?.length; i++) {
-        cumulativeWeight += weights?.[i];
-        if (random <= cumulativeWeight) {
-          setConnectionStatus(statuses?.[i]);
-          break;
-        }
-      }
-    }, 15000); // Check every 15 seconds
-
-    return () => clearInterval(statusInterval);
-  }, []);
+  
 
   const handleZoomIn = () => {
     setZoomLevel(prev => Math.min(prev + 0.3, 4.0)); // Allow more zoom for detailed Indian map view
@@ -64,20 +44,8 @@ const MainControlDashboard = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
-      {/* CRIS Connection Status Banner */}
-      {connectionStatus !== 'connected' && (
-        <div className={`
-          fixed top-16 left-0 right-0 z-40 px-6 py-2 text-center text-sm font-medium
-          ${connectionStatus === 'reconnecting' ?'bg-warning text-warning-foreground' :'bg-error text-error-foreground'
-          }
-        `}>
-          {connectionStatus === 'reconnecting' ?'Reconnecting to CRIS (Railway Information System)...' :'CRIS Connection Lost - Operating in offline mode'
-          }
-        </div>
-      )}
-
       {/* Main Indian Railway Dashboard Layout */}
-      <div className={`pt-16 ${connectionStatus !== 'connected' ? 'pt-24' : ''}`}>
+      <div className={`pt-16`}>
         <div className="h-screen flex flex-col">
           {/* Main Content Area - Enhanced for Indian Railway Network */}
           <div className="flex-1 flex overflow-hidden">
@@ -94,6 +62,7 @@ const MainControlDashboard = () => {
                 onZoomIn={handleZoomIn}
                 onZoomOut={handleZoomOut}
                 onResetView={handleResetView}
+                onTrainSelect={handleTrainSelect}
               />
             </div>
 
@@ -110,10 +79,9 @@ const MainControlDashboard = () => {
 
             {/* Right Sidebar - Enhanced Train Telemetry & Indian Railway Alerts (4 columns) */}
             <div className="w-1/6 min-w-[340px] hidden lg:block">
-              <TrainTelemetry
+              <TrainTelemetryPanel
                 selectedTrain={selectedTrain}
-                onAlertAction={handleAlertAction}
-                alerts={[]}
+                onClose={() => setSelectedTrain(null)}
               />
             </div>
           </div>

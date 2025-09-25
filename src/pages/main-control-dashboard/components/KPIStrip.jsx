@@ -1,16 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Icon from '../../../components/AppIcon';
 
 const KPIStrip = () => {
   const [kpiData, setKpiData] = useState({
-    activeTrains: 13152,        // Real approximate count of daily Indian trains
-    onTimePerformance: 75.2,    // Realistic Indian Railway OTP
-    averageDelay: 18.5,         // Average delay in minutes
-    trackUtilization: 68.3,     // Track utilization percentage
-    systemHealth: 92.1,         // Overall system health
-    alertsCount: 47,            // Active alerts
-    passengerTrains: 9573,      // Daily passenger trains
-    freightTrains: 8956         // Daily freight trains
+    activeTrains: 0,
+    onTimePerformance: 0,
+    averageDelay: 0,
+    trackUtilization: 0,
+    systemHealth: 96.0,
+    alertsCount: 0,
+    passengerTrains: 0,
+    freightTrains: 0
   });
 
   const [trends, setTrends] = useState({
@@ -25,32 +25,72 @@ const KPIStrip = () => {
   });
 
   useEffect(() => {
-    // Simulate real-time KPI updates with Indian Railway realistic ranges
-    const interval = setInterval(() => {
-      setKpiData(prev => ({
-        activeTrains: Math.max(12000, Math.min(14000, prev?.activeTrains + (Math.random() - 0.5) * 100)),
-        onTimePerformance: Math.max(65, Math.min(85, prev?.onTimePerformance + (Math.random() - 0.5) * 3)),
-        averageDelay: Math.max(5, Math.min(35, prev?.averageDelay + (Math.random() - 0.5) * 4)),
-        trackUtilization: Math.max(55, Math.min(80, prev?.trackUtilization + (Math.random() - 0.5) * 4)),
-        systemHealth: Math.max(85, Math.min(98, prev?.systemHealth + (Math.random() - 0.5) * 2)),
-        alertsCount: Math.max(20, Math.min(80, Math.floor(prev?.alertsCount + (Math.random() - 0.5) * 8))),
-        passengerTrains: Math.max(9000, Math.min(10000, prev?.passengerTrains + (Math.random() - 0.5) * 50)),
-        freightTrains: Math.max(8000, Math.min(9500, prev?.freightTrains + (Math.random() - 0.5) * 30))
-      }));
+    let isMounted = true;
+    const wsRef = { current: null };
 
-      setTrends(prev => ({
-        activeTrains: (Math.random() - 0.5) * 6,
-        onTimePerformance: (Math.random() - 0.5) * 4,
-        averageDelay: (Math.random() - 0.5) * 6,
-        trackUtilization: (Math.random() - 0.5) * 8,
-        systemHealth: (Math.random() - 0.5) * 3,
-        alertsCount: Math.floor((Math.random() - 0.5) * 15),
-        passengerTrains: (Math.random() - 0.5) * 4,
-        freightTrains: (Math.random() - 0.5) * 3
-      }));
-    }, 8000); // Slower updates for more realistic feel
+    const compute = (items = []) => {
+      const total = items.length;
+      const delayed = items.filter((t) => {
+        const d = Number(t?.delay) || Number(t?.delay_mins) || Number(t?.delayInMinutes) || Number(t?.lateMins) || 0;
+        return d > 5;
+      }).length;
+      const onTime = total > 0 ? ((total - delayed) / total) * 100 : 0;
+      const avgDelay = (() => {
+        const ds = items.map((t) => Number(t?.delay) || Number(t?.delay_mins) || Number(t?.delayInMinutes) || Number(t?.lateMins) || 0);
+        if (!ds.length) return 0;
+        return ds.reduce((a, b) => a + b, 0) / ds.length;
+      })();
+      const passenger = items.filter((t) => {
+        const name = (t?.name || t?.train_name || '').toLowerCase();
+        return /(exp|mail|passenger|shatabdi|rajdhani|duronto|vand|jan shatabdi|garib rath)/.test(name);
+      }).length;
+      const freight = Math.max(0, total - passenger);
+      // crude utilization proxy: normalize active trains vs a cap for the bbox
+      const utilization = Math.min(100, Math.round((total / 120) * 100));
+      const alerts = delayed;
 
-    return () => clearInterval(interval);
+      return {
+        activeTrains: total,
+        onTimePerformance: Number(onTime.toFixed(1)),
+        averageDelay: Number(avgDelay.toFixed(1)),
+        trackUtilization: utilization,
+        systemHealth: 96.0,
+        alertsCount: alerts,
+        passengerTrains: passenger,
+        freightTrains: freight
+      };
+    };
+
+    try {
+      const wsProtocol = location.protocol === 'https:' ? 'wss' : 'ws';
+      const wsUrl = `${wsProtocol}://localhost:5055/ws/trains/howrah`;
+      const ws = new WebSocket(wsUrl);
+      wsRef.current = ws;
+      ws.onmessage = (evt) => {
+        if (!isMounted) return;
+        try {
+          const payload = JSON.parse(evt.data);
+          if (payload?.type !== 'trains') return;
+          const list = Array.isArray(payload.trains) ? payload.trains : [];
+          const stats = compute(list);
+          setTrends({
+            activeTrains: 0,
+            onTimePerformance: 0,
+            averageDelay: 0,
+            trackUtilization: 0,
+            systemHealth: 0,
+            alertsCount: 0,
+            passengerTrains: 0,
+            freightTrains: 0
+          });
+          setKpiData(stats);
+        } catch {}
+      };
+    } catch {}
+    return () => {
+      isMounted = false;
+      try { wsRef.current && wsRef.current.close(); } catch {}
+    };
   }, []);
 
   const kpiItems = [
@@ -172,15 +212,15 @@ const KPIStrip = () => {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-foreground flex items-center">
           <Icon name="BarChart3" size={20} className="mr-2" />
-          Indian Railway Performance Dashboard
+          Howrah Section Performance Dashboard
         </h2>
         <div className="flex items-center space-x-4 text-sm text-muted-foreground">
           <div className="flex items-center space-x-2">
             <div className="w-2 h-2 bg-success rounded-full status-breathing"></div>
-            <span>CRIS Data Live</span>
+            <span>RapidAPI IRCTC1 Live</span>
           </div>
           <span>•</span>
-          <span>Zone: All India</span>
+          <span>Section: Howrah (~200 km)</span>
           <span>•</span>
           <span className="font-mono">
             {new Date()?.toLocaleTimeString('en-IN', { hour12: false })} IST
@@ -262,9 +302,7 @@ const KPIStrip = () => {
           </button>
         </div>
         
-        <div className="text-xs text-muted-foreground">
-          Data Source: Centre for Railway Information Systems (CRIS)
-        </div>
+        <div className="text-xs text-muted-foreground">Data Source: IRCTC1 via RapidAPI</div>
       </div>
     </div>
   );

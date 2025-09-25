@@ -30,7 +30,6 @@
     "@dhiwise/component-tagger": "^1.0.10",
     "@radix-ui/react-slot": "^1.2.3",
     "@reduxjs/toolkit": "^2.6.1",
-    "@tailwindcss/forms": "^0.5.7",
     "@testing-library/jest-dom": "^5.15.1",
     "@testing-library/react": "^11.2.7",
     "@testing-library/user-event": "^12.8.3",
@@ -82,6 +81,7 @@
   "devDependencies": {
     "@tailwindcss/aspect-ratio": "^0.4.2",
     "@tailwindcss/container-queries": "^0.1.1",
+    "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/line-clamp": "^0.1.0",
     "@tailwindcss/typography": "^0.5.16",
     "@vitejs/plugin-react": "4.3.4",

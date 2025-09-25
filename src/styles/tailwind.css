@@ -1,0 +1,91 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Core Colors */
+    --color-background: #0A0E0D; /* near-black */
+    --color-foreground: #F8F9FA; /* high-contrast white */
+    --color-border: #2A2F2C; /* strategic border color */
+    --color-input: #1A1F1C; /* elevated surface */
+    --color-ring: #2D6A4F; /* medium green */
+    
+    /* Card & Surface Colors */
+    --color-card: #1A1F1C; /* elevated surface */
+    --color-card-foreground: #F8F9FA; /* high-contrast white */
+    --color-popover: #1A1F1C; /* elevated surface */
+    --color-popover-foreground: #F8F9FA; /* high-contrast white */
+    
+    /* Muted Colors */
+    --color-muted: #2A2F2C; /* strategic border color */
+    --color-muted-foreground: #ADB5BD; /* muted gray */
+    
+    /* Primary Colors */
+    --color-primary: #1B4332; /* deep forest green */
+    --color-primary-foreground: #F8F9FA; /* high-contrast white */
+    
+    /* Secondary Colors */
+    --color-secondary: #2D6A4F; /* medium green */
+    --color-secondary-foreground: #F8F9FA; /* high-contrast white */
+    
+    /* Accent Colors */
+    --color-accent: #F77F00; /* vibrant orange */
+    --color-accent-foreground: #0A0E0D; /* near-black */
+    
+    /* State Colors */
+    --color-success: #40916C; /* railway-standard green */
+    --color-success-foreground: #F8F9FA; /* high-contrast white */
+    
+    --color-warning: #FF8500; /* standard railway orange */
+    --color-warning-foreground: #0A0E0D; /* near-black */
+    
+    --color-error: #D00000; /* critical red */
+    --color-error-foreground: #F8F9FA; /* high-contrast white */
+    
+    --color-destructive: #D00000; /* critical red */
+    --color-destructive-foreground: #F8F9FA; /* high-contrast white */
+  }
+  
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', sans-serif;
+  }
+  
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  .control-room-shadow {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .status-breathing {
+    animation: statusBreathing 2s ease-in-out infinite;
+  }
+  
+  @keyframes statusBreathing {
+    0%, 100% { opacity: 0.85; }
+    50% { opacity: 1; }
+  }
+  
+  .transition-control {
+    transition: all 150ms ease-out;
+  }
+  
+  .transition-smooth {
+    transition: all 300ms ease-out;
+  }
+}

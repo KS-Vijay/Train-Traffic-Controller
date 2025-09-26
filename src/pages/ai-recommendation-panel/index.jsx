@@ -5,6 +5,7 @@ import RecommendationCard from './components/RecommendationCard';
 import RecommendationHistory from './components/RecommendationHistory';
 import FilterControls from './components/FilterControls';
 import ScenarioSimulator from './components/ScenarioSimulator';
+import AIInsights from './components/AIInsights';
 import Icon from '../../components/AppIcon';
 import Button from '../../components/ui/Button';
 
@@ -157,12 +158,63 @@ const AIRecommendationsPanel = () => {
   ];
 
   useEffect(() => {
-    // Simulate loading recommendations
-    setTimeout(() => {
-      setRecommendations(mockRecommendations);
-      setIsLoading(false);
-    }, 1500);
+    fetchMLRecommendations();
+    const interval = setInterval(fetchMLRecommendations, 30000); // Update every 30 seconds
+    return () => clearInterval(interval);
   }, []);
+
+  const fetchMLRecommendations = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('http://localhost:5055/api/ml/suggestions');
+      const data = await response.json();
+      
+      if (data.ok && data.suggestions) {
+        // Convert ML suggestions to recommendation format
+        const mlRecommendations = data.suggestions.map((suggestion, index) => ({
+          id: `ml_${index}`,
+          title: `${suggestion.action.replace('_', ' ').toUpperCase()} - Train ${suggestion.train_id}`,
+          description: suggestion.reason,
+          type: suggestion.action.includes('route') ? 'routing' : 
+                suggestion.action.includes('speed') ? 'traffic' :
+                suggestion.action.includes('schedule') ? 'scheduling' : 'maintenance',
+          priority: suggestion.priority,
+          confidence: Math.round(suggestion.expected_improvement * 100),
+          estimatedTime: Math.round(suggestion.expected_improvement * 20), // Convert to minutes
+          affectedTrains: 1,
+          expectedImpact: {
+            delayReduction: Math.round(suggestion.expected_improvement * 15),
+            efficiencyGain: Math.round(suggestion.expected_improvement * 20),
+            costSaving: Math.round(suggestion.expected_improvement * 5)
+          },
+          logic: `AI model analysis indicates ${suggestion.reason}. Expected improvement: ${Math.round(suggestion.expected_improvement * 100)}%`,
+          steps: [
+            `Execute ${suggestion.action.replace('_', ' ')} for Train ${suggestion.train_id}`,
+            'Monitor system performance',
+            'Validate improvement metrics',
+            'Update optimization models'
+          ],
+          riskLevel: suggestion.priority === 'high' ? 'medium' : 'low',
+          riskDescription: suggestion.priority === 'high' ? 'Requires immediate attention' : 'Low risk optimization',
+          timestamp: new Date(),
+          status: 'pending',
+          source: 'ML'
+        }));
+        
+        // Combine with mock recommendations
+        setRecommendations([...mlRecommendations, ...mockRecommendations]);
+      } else {
+        // Fallback to mock data
+        setRecommendations(mockRecommendations);
+      }
+    } catch (error) {
+      console.error('Failed to fetch ML recommendations:', error);
+      // Fallback to mock data
+      setRecommendations(mockRecommendations);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleFilterChange = (key, value) => {
     if (key === 'reset') {
@@ -272,6 +324,11 @@ const AIRecommendationsPanel = () => {
                 Refresh
               </Button>
             </div>
+          </div>
+
+          {/* AI Insights */}
+          <div className="mb-8">
+            <AIInsights />
           </div>
 
           {/* Predictive Congestion Map */}

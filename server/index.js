@@ -4,6 +4,8 @@ const http = require('http');
 const cors = require('cors');
 const WebSocket = require('ws');
 const axios = require('axios');
+const { spawn } = require('child_process');
+const path = require('path');
 
 const PORT = process.env.PORT || 5055;
 const RAILRADAR_KEY = process.env.VITE_RAILRADAR_API || process.env.RAILRADAR_API;
@@ -23,9 +25,85 @@ const wss = new WebSocket.Server({ server, path: '/ws/trains/howrah' });
 
 let cache = { trains: [], updatedAt: 0 };
 let backoffUntil = 0;
+let mlCache = { predictions: null, suggestions: [], updatedAt: 0 };
 
 function inBox(lat, lon) {
   return lat >= BBOX.minLat && lat <= BBOX.maxLat && lon >= BBOX.minLon && lon <= BBOX.maxLon;
+}
+
+// ML Prediction Functions
+function runMLPrediction(trains) {
+  return new Promise((resolve, reject) => {
+    const mlScript = path.join(__dirname, '..', 'ML', 'ml_server_integration.py');
+    const pythonProcess = spawn('python', [mlScript], {
+      cwd: path.join(__dirname, '..', 'ML'),
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+
+    let output = '';
+    let errorOutput = '';
+
+    pythonProcess.stdout.on('data', (data) => {
+      output += data.toString();
+    });
+
+    pythonProcess.stderr.on('data', (data) => {
+      errorOutput += data.toString();
+    });
+
+    pythonProcess.on('close', (code) => {
+      if (code === 0) {
+        try {
+          // Parse JSON output from Python
+          const result = JSON.parse(output);
+          resolve(result);
+        } catch (e) {
+          resolve({ error: 'Failed to parse ML output', details: e.message, output });
+        }
+      } else {
+        resolve({ error: 'ML process failed', code, stderr: errorOutput });
+      }
+    });
+
+    pythonProcess.on('error', (err) => {
+      resolve({ error: 'Failed to start ML process', details: err.message });
+    });
+
+    // Send train data to Python process
+    const trainData = JSON.stringify(trains);
+    pythonProcess.stdin.write(trainData);
+    pythonProcess.stdin.end();
+  });
+}
+
+function calculateCongestionHeatmap(trains, predictions) {
+  // Create a grid-based heatmap of congestion
+  const gridSize = 0.01; // ~1km grid cells
+  const heatmap = {};
+  
+  trains.forEach((train, index) => {
+    if (predictions && predictions[index] !== undefined) {
+      const gridLat = Math.floor(train.lat / gridSize) * gridSize;
+      const gridLon = Math.floor(train.lon / gridSize) * gridSize;
+      const key = `${gridLat},${gridLon}`;
+      
+      if (!heatmap[key]) {
+        heatmap[key] = {
+          lat: gridLat + gridSize/2,
+          lon: gridLon + gridSize/2,
+          congestion: 0,
+          trainCount: 0,
+          totalRisk: 0
+        };
+      }
+      
+      heatmap[key].trainCount++;
+      heatmap[key].totalRisk += predictions[index];
+      heatmap[key].congestion = heatmap[key].totalRisk / heatmap[key].trainCount;
+    }
+  });
+  
+  return Object.values(heatmap).filter(h => h.congestion > 0.3); // Only show high-risk areas
 }
 
 async function fetchRailRadarTrains() {
@@ -268,6 +346,27 @@ function stepSimulation(dtSec = 1) {
 
 if (SIMULATE) initSimulation();
 
+// ML Prediction loop (every 30 seconds)
+setInterval(async () => {
+  if (cache.trains.length > 0) {
+    try {
+      const mlResult = await runMLPrediction(cache.trains);
+      if (mlResult && !mlResult.error) {
+        mlCache.predictions = mlResult;
+        mlCache.updatedAt = Date.now();
+        
+        // Calculate congestion heatmap
+        const heatmap = calculateCongestionHeatmap(cache.trains, mlResult.congestion_predictions || []);
+        mlCache.heatmap = heatmap;
+        
+        console.log(`ML Analysis: ${mlResult.summary?.congested_trains || 0} congested trains, Rate: ${mlResult.summary?.congestion_rate || '0%'}`);
+      }
+    } catch (e) {
+      console.error('ML prediction error:', e.message);
+    }
+  }
+}, 30000); // Run ML every 30 seconds
+
 // WS broadcast loop
 setInterval(async () => {
   let trains = [];
@@ -285,6 +384,63 @@ setInterval(async () => {
 
 // Health
 app.get('/api/health', (_req, res) => res.json({ ok: true, updatedAt: cache.updatedAt, trains: cache.trains.length }));
+
+// ML Prediction endpoints
+app.get('/api/ml/predictions', (_req, res) => {
+  res.json({
+    ok: true,
+    predictions: mlCache.predictions,
+    heatmap: mlCache.heatmap || [],
+    updatedAt: mlCache.updatedAt
+  });
+});
+
+app.get('/api/ml/suggestions', (_req, res) => {
+  const suggestions = mlCache.predictions?.optimization_suggestions || [];
+  res.json({
+    ok: true,
+    suggestions: suggestions.slice(0, 10), // Top 10 suggestions
+    total: suggestions.length,
+    updatedAt: mlCache.updatedAt
+  });
+});
+
+app.get('/api/ml/heatmap', (_req, res) => {
+  res.json({
+    ok: true,
+    heatmap: mlCache.heatmap || [],
+    updatedAt: mlCache.updatedAt
+  });
+});
+
+// Trigger ML prediction manually
+app.post('/api/ml/predict', async (_req, res) => {
+  try {
+    if (cache.trains.length === 0) {
+      return res.json({ error: 'No train data available' });
+    }
+    
+    const mlResult = await runMLPrediction(cache.trains);
+    if (mlResult && !mlResult.error) {
+      mlCache.predictions = mlResult;
+      mlCache.updatedAt = Date.now();
+      
+      const heatmap = calculateCongestionHeatmap(cache.trains, mlResult.congestion_predictions || []);
+      mlCache.heatmap = heatmap;
+      
+      res.json({
+        ok: true,
+        predictions: mlResult,
+        heatmap: heatmap,
+        updatedAt: Date.now()
+      });
+    } else {
+      res.json({ error: 'ML prediction failed', details: mlResult });
+    }
+  } catch (e) {
+    res.json({ error: 'ML prediction error', details: e.message });
+  }
+});
 
 server.listen(PORT, () => {
   console.log(`Backend server listening on http://localhost:${PORT}`);

@@ -222,8 +222,28 @@ const MapControls = ({
                       <div>
                         <span className="text-sm font-medium text-foreground">{train?.number}</span>
                         <p className="text-xs text-muted-foreground">{train?.name}</p>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <span className={`text-xs px-1 py-0.5 rounded ${
+                            train?.category === 'express' ? 'bg-blue-100 text-blue-800' :
+                            train?.category === 'vande' ? 'bg-purple-100 text-purple-800' :
+                            train?.category === 'freight' ? 'bg-orange-100 text-orange-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {train?.category?.toUpperCase()}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {train?.speed || 0} km/h
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-xs text-muted-foreground font-mono">{train?.route}</span>
+                      <div className="text-right">
+                        <span className="text-xs text-muted-foreground font-mono">{train?.route}</span>
+                        {train?.delay > 0 && (
+                          <div className="text-xs text-red-600 font-medium">
+                            +{train?.delay} min
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}

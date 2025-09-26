@@ -3,7 +3,7 @@ import maplibregl from 'maplibre-gl';
 // Using backend WebSocket stream instead of direct API polling
 import 'maplibre-gl/dist/maplibre-gl.css';
 
-const InteractiveMap = ({ selectedFilters, mapLayers, zoomLevel, onTrainSelect, selectedTrain }) => {
+const InteractiveMap = ({ selectedFilters, mapLayers, zoomLevel, onTrainSelect, selectedTrain, onTrainsUpdate }) => {
   const [selectedTrainData, setSelectedTrainData] = useState(null);
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
@@ -106,10 +106,28 @@ const InteractiveMap = ({ selectedFilters, mapLayers, zoomLevel, onTrainSelect, 
           const list = Array.isArray(payload.trains) ? payload.trains : [];
           // eslint-disable-next-line no-console
           console.log('[WS] trains received:', list.length);
+          
+          // Pass trains to parent for filters and search
+          if (onTrainsUpdate) {
+            onTrainsUpdate(list);
+          }
           const defaultPos = [88.35, 22.58];
           const TRAIN_ICON_PATH = '/assets/images/train.png';
           const nowIds = new Set();
-          const src = list.length ? list : [
+          // Filter trains based on selected filters
+          const filteredList = list.filter(train => {
+            if (!selectedFilters || selectedFilters.length === 0) return true;
+            
+            // Check category filter
+            if (selectedFilters.includes(train.category)) return true;
+            
+            // Check delayed filter
+            if (selectedFilters.includes('delayed') && (train.delay || 0) > 0) return true;
+            
+            return false;
+          });
+
+          const src = filteredList.length ? filteredList : [
             { id: 'demo-1', lon: defaultPos[0] + 0.05, lat: defaultPos[1] + 0.02 },
             { id: 'demo-2', lon: defaultPos[0] - 0.03, lat: defaultPos[1] - 0.01 },
             { id: 'demo-3', lon: defaultPos[0] + 0.02, lat: defaultPos[1] - 0.03 }
@@ -242,18 +260,18 @@ const InteractiveMap = ({ selectedFilters, mapLayers, zoomLevel, onTrainSelect, 
           <div className="flex items-center space-x-2">
             <span className="inline-block w-6 h-0.5" style={{ backgroundColor: '#22c55e' }} />
             <span>Electrified</span>
-          </div>
+        </div>
           <div className="flex items-center space-x-2">
             <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: '#6f42c1' }} />
             <span>Stations</span>
-          </div>
+      </div>
           <div className="flex items-center space-x-2">
             <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: '#f59e0b' }} />
             <span>Signals</span>
-          </div>
-        </div>
-      </div>
-      
+              </div>
+              </div>
+            </div>
+
     </div>
   );
 };

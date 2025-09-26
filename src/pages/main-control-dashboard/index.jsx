@@ -6,8 +6,7 @@ import TrainTelemetryPanel from './components/TrainTelemetryPanel';
 import KPIStrip from './components/KPIStrip';
 
 const MainControlDashboard = () => {
-  const [timeRange, setTimeRange] = useState('4h');
-  const [selectedFilters, setSelectedFilters] = useState(['passenger', 'freight']);
+  const [selectedFilters, setSelectedFilters] = useState(['passenger', 'express', 'vande', 'freight']);
   const [mapLayers, setMapLayers] = useState({
     signals: true,
     blocks: true,
@@ -16,6 +15,7 @@ const MainControlDashboard = () => {
   });
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [selectedTrain, setSelectedTrain] = useState(null);
+  const [availableTrains, setAvailableTrains] = useState([]);
   
 
   const handleZoomIn = () => {
@@ -35,6 +35,10 @@ const MainControlDashboard = () => {
     setSelectedTrain(train);
   };
 
+  const handleTrainsUpdate = (trains) => {
+    setAvailableTrains(trains);
+  };
+
   const handleAlertAction = (alertId) => {
     console.log('Responding to Indian Railway alert:', alertId);
     // Handle alert response logic for Indian context
@@ -52,8 +56,6 @@ const MainControlDashboard = () => {
             {/* Left Sidebar - Enhanced Map Controls (4 columns) */}
             <div className="w-1/6 min-w-[320px] hidden lg:block">
               <MapControls
-                timeRange={timeRange}
-                setTimeRange={setTimeRange}
                 selectedFilters={selectedFilters}
                 setSelectedFilters={setSelectedFilters}
                 mapLayers={mapLayers}
@@ -63,6 +65,7 @@ const MainControlDashboard = () => {
                 onZoomOut={handleZoomOut}
                 onResetView={handleResetView}
                 onTrainSelect={handleTrainSelect}
+                availableTrains={availableTrains}
               />
             </div>
 
@@ -74,6 +77,7 @@ const MainControlDashboard = () => {
                 zoomLevel={zoomLevel}
                 onTrainSelect={handleTrainSelect}
                 selectedTrain={selectedTrain}
+                onTrainsUpdate={handleTrainsUpdate}
               />
             </div>
 
